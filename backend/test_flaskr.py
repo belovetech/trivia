@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 import unittest
 import json
@@ -15,7 +16,7 @@ class TriviaTestCase(unittest.TestCase):
         self.app = create_app()
         self.client = self.app.test_client
         self.database_name = "trivia_test"
-        self.database_path = "postgres://{}:{}@{}/{}".format(
+        self.database_path = "postgresql://{}:{}@{}/{}".format(
             'beloved', 'Beloved0211', 'localhost:5432', self.database_name)
         setup_db(self.app, self.database_path)
 
@@ -29,8 +30,8 @@ class TriviaTestCase(unittest.TestCase):
         self.new_question = {
             'question': 'How many states consist of Nigeria?',
             'answer': '36 states',
-            'category': 'history',
-            'difficulty': 'easy'
+            'category': 3,
+            'difficulty': 2
         }
 
     def tearDown(self):
@@ -61,7 +62,45 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], False)
         self.assertEqual(data['message'], 'resources not found')
 
+    def test_get_category(self):
+        """Test get question category"""
+
+        res = self.client().get('/categories')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['categories'])
+
+    def test_404_category_does_not_found(self):
+        res = self.client().get('/categories', json={'type': 'math'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        # self.assertEqual(data['message'], 'resources not found')
+
+    def test_get_question(self):
+        """Test get questions"""
+        res = self.client().get('/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['questions'])
+        self.assertEqual(data['total_questions'])
+        self.assertEqual(data['categories'])
+
+    def test_404_if_question_does_not_found(self):
+        res = self.client().get('/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'resources not found')
+
     def test_delete_question(self):
+        """Test delete questions"""
         res = self.client().delete('/questions/1')
         data = json.loads(res.data)
 
@@ -83,6 +122,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['message'], 'resources not found')
 
     def test_create_new_question(self):
+        """Test create questions"""
         res = self.client().post('/questions', json=self.new_question)
         data = json.loads(res.data)
 
@@ -100,6 +140,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['message'], 'method not allowed')
 
     def test_search_question(self):
+        """Test search question"""
         res = self.client().post(
             '/questions', json={'serach': 'How many days in a week'})
         data = json.loads(res.data)
@@ -117,6 +158,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], True)
         self.assertEqual(data['total_questions'], 0)
         self.assertEqual(len(data['questions']), 0)
+
 
         # Make the tests conveniently executable
 if __name__ == "__main__":
