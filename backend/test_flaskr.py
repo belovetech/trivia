@@ -78,7 +78,6 @@ class TriviaTestCase(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
-        # self.assertEqual(data['message'], 'resources not found')
 
     def test_get_question(self):
         """Test get questions"""
