@@ -87,6 +87,7 @@ The API will return three types of errors:
 - 400 – bad request
 - 404 – resource not found
 - 422 – unprocessable
+- 500 - internal server error
 
 ### Endpoints
 
