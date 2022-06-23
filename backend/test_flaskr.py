@@ -99,6 +99,25 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], False)
         self.assertEqual(data['message'], 'method not allowed')
 
+    def test_search_question(self):
+        res = self.client().post(
+            '/questions', json={'serach': 'How many days in a week'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['total_questions'])
+        self.assertEqual(len(data['questions']))
+
+    def test_get_search_without_result(self):
+        res = self.client().post('/questions', json={'search': 'hey'})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['total_questions'], 0)
+        self.assertEqual(len(data['questions']), 0)
+
         # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()

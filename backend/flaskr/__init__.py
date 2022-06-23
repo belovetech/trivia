@@ -1,6 +1,7 @@
 import json
 import os
-from flask import Flask, request, abort, jsonify
+from select import select
+from flask import Flask, current_app, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from models import setup_db, Question, Category
@@ -58,12 +59,19 @@ def create_app(test_config=None):
     """
     @app.route('/categories')
     def get_categories():
-        selections = Category.query.order_by(Category.id).all()
-        formatted_category = [category.format() for category in selections]
+        """Get all categories"""
+        categories = Category.query.all()
+        category_dic = {}
+
+        for category in categories:
+            category[category.id] = category.type
+
+        if not category_dic:
+            abort(404)
 
         return jsonify({
             'success': True,
-            'id': formatted_category.id
+            'categories': category_dic
         })
 
     """
@@ -80,10 +88,12 @@ def create_app(test_config=None):
     """
     @app.route('/questions')
     def get_questions():
+        """Get question in all categories"""
         selections = Question.query.order_by(Question.id).all()
         current_question = pagination_questions(request, selections)
         categories = Category.query.order_by(Category.id).all()
-        categories.format()
+
+        formatted_categories = categories.format()
 
         if not current_question:
             abort(404)
@@ -92,8 +102,7 @@ def create_app(test_config=None):
             'success': True,
             'questions': current_question,
             'total_questions': len(Question.query.all()),
-            # 'current_category': self.current_category,
-            'categories': categories
+            'categories': formatted_categories
         })
 
     """
@@ -105,7 +114,8 @@ def create_app(test_config=None):
     """
     @app.route('/questions/<int:question_id>', methods=['DELETE'])
     def delete_question(question_id):
-        body = request.get_json()
+        """Delete question based on id selected"""
+        # body = request.get_json()
 
         try:
             question = Question.query.filter(
@@ -115,14 +125,14 @@ def create_app(test_config=None):
                 abort(404)
 
             question.delete()
-            selections = Question.query.order_by(Question.id).all()
-            current_question = pagination_questions(request, selections)
+            # selections = Question.query.order_by(Question.id).all()
+            # current_question = pagination_questions(request, selections)
 
             return jsonify({
                 'success': True,
-                'id': question_id,
-                'questions': current_question,
-                'total_questions': len(Question.query.all())
+                'deleted': question_id,
+                # 'questions': current_question,
+                # 'total_questions': len(Question.query.all())
             })
         except:
             abort(404)
@@ -173,6 +183,24 @@ def create_app(test_config=None):
     only question that include that string within their question.
     Try using the word "title" to start.
     """
+    @app.route('/questions', methods=['POST'])
+    def search_question():
+        body = request.get_json()
+        search = body.get('search', None)
+
+        try:
+            if search:
+                selections = Question.query.order_by(
+                    Question.id).filter(Question.question.ilike('%{}%'.format(search)))
+                current_question = pagination_questions(request, selections)
+
+                return jsonify({
+                    'success': True,
+                    'questions': current_question,
+                    'total_questions': len(selections.all())
+                })
+        except:
+            abort(404)
 
     """
     @TODO:
@@ -182,6 +210,25 @@ def create_app(test_config=None):
     categories in the left column will cause only questions of that
     category to be shown.
     """
+
+    @app.route('/categories/<int:category_id>/questioms')
+    def get_questions_by_category(category_id):
+        """Get questions based on category"""
+
+        category = Category.query.filter_by(category=category_id).one_or_none()
+
+        if category is None:
+            abort(400)
+
+        selections = Question.query.filter_by(category=category.id).all()
+        current_questions = pagination_questions(request, selections)
+
+        return jsonify({
+            'success': True,
+            'questions': current_questions,
+            'total_questions': len(Question.query.all()),
+            'current_category': category.type
+        })
 
     """
     @TODO:
