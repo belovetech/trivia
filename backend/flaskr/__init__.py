@@ -61,17 +61,15 @@ def create_app(test_config=None):
     def get_categories():
         """Get all categories"""
         categories = Category.query.all()
-        category_dic = {}
 
-        for category in categories:
-            category[category.id] = category.type
+        formatted_categories = [category.format() for category in categories]
 
-        if not category_dic:
+        if not formatted_categories:
             abort(404)
 
         return jsonify({
             'success': True,
-            'categories': category_dic
+            'categories': formatted_categories
         })
 
     """
@@ -93,7 +91,7 @@ def create_app(test_config=None):
         current_question = pagination_questions(request, selections)
         categories = Category.query.order_by(Category.id).all()
 
-        formatted_categories = categories.format()
+        formatted_categories = [category.format() for category in categories]
 
         if not current_question:
             abort(404)
@@ -125,14 +123,14 @@ def create_app(test_config=None):
                 abort(404)
 
             question.delete()
-            # selections = Question.query.order_by(Question.id).all()
-            # current_question = pagination_questions(request, selections)
+            selections = Question.query.order_by(Question.id).all()
+            current_question = pagination_questions(request, selections)
 
             return jsonify({
                 'success': True,
                 'deleted': question_id,
-                # 'questions': current_question,
-                # 'total_questions': len(Question.query.all())
+                'questions': current_question,
+                'total_questions': len(Question.query.all())
             })
         except:
             abort(404)
