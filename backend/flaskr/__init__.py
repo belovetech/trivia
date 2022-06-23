@@ -240,12 +240,70 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
 
+    @app.route('/quizzez', methods=['POST'])
+    def get_random_quiz_question():
+        """Get random questions for playing quiz"""
+        body = request.get_json()
+
+        previous = body.get('previous_questions')
+
+        category = body.get('quiz_category')
+
+        if category is None or previous is None:
+            abort(400)
+
+        # load all questions if 'ALL' is selected
+        if category['id'] == 0:
+            questions = Question.query.all()
+        else:
+            # load quetion for a given category
+            questions = Question.query.filter_by(category=category['id']).all()
+
+        total_questions = len(questions)
+
+        # picks a random question
+        def get_random_quiz_question():
+            return questions[random.randrange(0, total_questions, 1)]
+
+        # checks to see if the question has been given before
+        def is_used(question):
+            used = False
+            for que in previous:
+                if que == question.id:
+                    used = True
+            return used
+
+        # get random question
+        question = get_random_quiz_question()
+
+        while (is_used(question)):
+            question = get_random_quiz_question()
+
+            # if all questions have been used return no question
+            if (len(previous) == total_questions):
+                return jsonify({
+                    'success': True
+                })
+
+        return jsonify({
+            'success': True,
+            'question': question.format()
+        })
+
     """
     @TODO:
     Create error handlers for all expected errors
     including 404 and 422.
     """
     # Error handling
+    @app.errorhandler(400)
+    def bad_request(error):
+        return jsonify({
+            'success': False,
+            'error': 400,
+            'message': 'bad request'
+        }), 400
+
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({
