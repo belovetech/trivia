@@ -1,6 +1,5 @@
-from cgitb import reset
+import json
 import os
-from unicodedata import category
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -64,7 +63,7 @@ def create_app(test_config=None):
 
         return jsonify({
             'success': True,
-
+            'id': formatted_category.id
         })
 
     """
@@ -79,6 +78,23 @@ def create_app(test_config=None):
     ten questions per page and pagination at the bottom of the screen for three pages.
     Clicking on the page numbers should update the questions.
     """
+    @app.route('/questions')
+    def get_questions():
+        selections = Question.query.order_by(Question.id).all()
+        current_question = pagination_questions(request, selections)
+        categories = Category.query.order_by(Category.id).all()
+        categories.format()
+
+        if not current_question:
+            abort(404)
+
+        return jsonify({
+            'success': True,
+            'questions': current_question,
+            'total_questions': len(Question.query.all()),
+            # 'current_category': self.current_category,
+            'categories': categories
+        })
 
     """
     @TODO:
@@ -87,6 +103,29 @@ def create_app(test_config=None):
     TEST: When you click the trash icon next to a question, the question will be removed.
     This removal will persist in the database and when you refresh the page.
     """
+    @app.route('/questions/<int:question_id>', methods=['DELETE'])
+    def delete_question(question_id):
+        body = request.get_json()
+
+        try:
+            question = Question.query.filter(
+                Question.id == question_id).one_or_none()
+
+            if question is None:
+                abort(404)
+
+            question.delete()
+            selections = Question.query.order_by(Question.id).all()
+            current_question = pagination_questions(request, selections)
+
+            return jsonify({
+                'success': True,
+                'id': question_id,
+                'questions': current_question,
+                'total_questions': len(Question.query.all())
+            })
+        except:
+            abort(404)
 
     """
     @TODO:
@@ -98,6 +137,31 @@ def create_app(test_config=None):
     the form will clear and the question will appear at the end of the last page
     of the questions list in the "List" tab.
     """
+    @app.route('/questions', methods=['POST'])
+    def create_question():
+        body = request.get_json()
+
+        new_question = body.get('question', None)
+        new_answer = body.get('answer', None)
+        new_category = body.get('category', None)
+        new_difficulty = body.get('difficulty', None)
+
+        try:
+            question = Question(question=new_question, answer=new_answer,
+                                category=new_category, difficulty=new_difficulty)
+
+            selections = Question.query.order_by(Question.id).all()
+            current_question = pagination_questions(request, selections)
+
+            return jsonify({
+                'success': True,
+                'created': question.id,
+                'questions': current_question,
+                'total_questions': len(Question.query.all())
+            })
+
+        except:
+            abort(422)
 
     """
     @TODO:
@@ -136,5 +200,29 @@ def create_app(test_config=None):
     Create error handlers for all expected errors
     including 404 and 422.
     """
+    # Error handling
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({
+            'success': False,
+            'error': 404,
+            'message': 'resources not found'
+        }), 404
+
+    @app.errorhandler(422)
+    def not_found(error):
+        return jsonify({
+            'success': False,
+            'error': 422,
+            'message': 'unproccessable'
+        }), 422
+
+    @app.errorhandler(405)
+    def not_found(error):
+        return jsonify({
+            'success': False,
+            'error': 405,
+            'message': 'method not allowed'
+        }), 405
 
     return app
