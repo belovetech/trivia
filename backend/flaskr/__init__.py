@@ -1,32 +1,71 @@
+from cgitb import reset
 import os
+from unicodedata import category
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from models import setup_db, Question, Category
 import random
 
 from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
+# Pagination
+
+
+def pagination_questions(request, selection):
+    """paginate questions page"""
+    pages = request.args.get('page', 1, type=int)
+    start = (pages - 1) * QUESTIONS_PER_PAGE
+    end = start + QUESTIONS_PER_PAGE
+
+    formatted_questions = [question.format() for question in selection]
+    current_questions = formatted_questions[start:end]
+
+    return current_questions
+
+
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
     setup_db(app)
+    CORS(app)
 
     """
     @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
     """
-
     """
     @TODO: Use the after_request decorator to set Access-Control-Allow
     """
+    # CORS Header
+    @app.after_request
+    def after_request(response):
+        response.headers.add(
+            "Access-Control-Allow-Origin", "*"
+        )
+        response.headers.add(
+            "Access-Control-Allow-Headers", "Content-Type, Authorisation, true"
+        )
+        response.headers.add(
+            "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,PATCH,OPTIONS"
+        )
+        return response
 
     """
     @TODO:
     Create an endpoint to handle GET requests
     for all available categories.
     """
+    @app.route('/categories')
+    def get_categories():
+        selections = Category.query.order_by(Category.id).all()
+        formatted_category = [category.format() for category in selections]
 
+        return jsonify({
+            'success': True,
+
+        })
 
     """
     @TODO:
@@ -99,4 +138,3 @@ def create_app(test_config=None):
     """
 
     return app
-
